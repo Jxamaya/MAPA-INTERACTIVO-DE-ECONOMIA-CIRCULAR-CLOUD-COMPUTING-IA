@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulador Avícola — Cobb 500 | Modelo Microeconómico</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+  :root {
+    --bg:        #0B1520;
+    --surface:   #111E2E;
+    --surface2:  #172435;
+    --border:    #1E3048;
+    --amber:     #F5A623;
+    --amber-dim: #C47D0C;
+    --green:     #3ECF8E;
+    --green-dim: #1A7A52;
+    --red:       #E05252;
+    --red-dim:   #8C2A2A;
+    --blue:      #5B9BD5;
+    --purple:    #A78BFA;
+    --text:      #E8EDF4;
+    --text-dim:  #7A90A8;
+    --text-muted:#3D5268;
+    --pt-color:  #5B9BD5;
+    --pme-color: #3ECF8E;
+    --pmg-color: #F5A623;
+    --noe-color: #A78BFA;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--amber), var(--amber-dim));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo-text h1 { font-size: 15px; font-weight: 700; letter-spacing: 0.02em; color: var(--text); }
+  .logo-text p  { font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+  .header-tag {
+    background: #1A2E45; border: 1px solid var(--border);
+    border-radius: 4px; padding: 4px 10px;
+    font-size: 11px; color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  /* ── LAYOUT ── */
+  .app {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: auto auto;
+    gap: 0;
+    height: calc(100vh - 61px);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    grid-row: 1 / 3;
+    padding: 20px 16px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  .sidebar::-webkit-scrollbar { width: 4px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  /* Sliders */
+  .control-group { display: flex; flex-direction: column; gap: 6px; }
+  .control-row { display: flex; justify-content: space-between; align-items: center; }
+  .control-label { font-size: 13px; color: var(--text-dim); }
+  .control-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px; font-weight: 600; color: var(--amber);
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 3px 8px; min-width: 64px; text-align: right;
+  }
+
+  input[type=range] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px;
+    background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--amber);
+    box-shadow: 0 0 6px rgba(245,166,35,0.5);
+    cursor: pointer;
+  }
+
+  /* Model params */
+  .param-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .param-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; padding: 8px 10px;
+  }
+  .param-item label {
+    font-size: 10px; color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace; display: block; margin-bottom: 4px;
+  }
+  .param-item input {
+    background: transparent; border: none; outline: none;
+    color: var(--text); font-size: 13px; font-weight: 600;
+    font-family: 'JetBrains Mono', monospace; width: 100%;
+  }
+
+  /* Results panel */
+  .results-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 14px;
+  }
+  .result-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px solid var(--border);
+  }
+  .result-row:last-child { border-bottom: none; }
+  .result-key { font-size: 12px; color: var(--text-dim); }
+  .result-val {
+    font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+  }
+  .val-amber { color: var(--amber); }
+  .val-green { color: var(--green); }
+  .val-blue  { color: var(--blue);  }
+  .val-purple{ color: var(--purple);}
+  .val-red   { color: var(--red);   }
+
+  .recomendacion {
+    border-radius: 6px; padding: 10px 12px;
+    font-size: 12px; line-height: 1.5; font-weight: 500;
+    margin-top: 10px;
+  }
+  .rec-sell   { background: rgba(62,207,142,0.12); border: 1px solid var(--green-dim); color: var(--green); }
+  .rec-wait   { background: rgba(245,166,35,0.10); border: 1px solid var(--amber-dim); color: var(--amber); }
+  .rec-avoid  { background: rgba(224,82,82,0.10);  border: 1px solid var(--red-dim);   color: var(--red);  }
+
+  /* ── CHARTS AREA ── */
+  .charts-area {
+    overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 20px;
+    position: relative;
+  }
+  .charts-area::-webkit-scrollbar { width: 4px; }
+  .charts-area::-webkit-scrollbar-track { background: transparent; }
+  .charts-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; overflow: hidden;
+  }
+  .chart-header {
+    padding: 12px 18px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .chart-title { font-size: 13px; font-weight: 600; }
+  .chart-legend { display: flex; gap: 16px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-dim); }
+  .legend-dot { width: 8px; height: 3px; border-radius: 2px; }
+
+  canvas { display: block; }
+
+  /* ── TABLA ── */
+  .table-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden;
+  }
+  .table-header {
+    padding: 12px 18px; border-bottom: 1px solid var(--border);
+  }
+  .table-scroll { overflow-x: auto; }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  }
+  th {
+    padding: 8px 14px; text-align: right; color: var(--text-muted);
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  th:first-child { text-align: left; }
+  td {
+    padding: 6px 14px; text-align: right; color: var(--text);
+    border-bottom: 1px solid rgba(30,48,72,0.5);
+  }
+  td:first-child { text-align: left; color: var(--text-dim); }
+  tr.highlight-not td { background: rgba(62,207,142,0.08); }
+  tr.highlight-mt  td { background: rgba(91,155,213,0.08); }
+  tr.highlight-noe td { background: rgba(167,139,250,0.10); }
+  tr:hover td { background: rgba(30,48,72,0.6); }
+
+  /* ── CONCEPTO PANEL (arrastrable) ── */
+  .concept-panel {
+    position: fixed;
+    bottom: 30px; right: 24px;
+    width: 320px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    z-index: 500;
+    user-select: none;
+    max-height: 70vh;
+    display: flex; flex-direction: column;
+  }
+  .panel-handle {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: grab;
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface2); border-radius: 10px 10px 0 0;
+  }
+  .panel-handle:active { cursor: grabbing; }
+  .panel-handle-title { font-size: 12px; font-weight: 700; color: var(--amber); }
+  .panel-toggle {
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px;
+  }
+  .panel-body {
+    padding: 14px; overflow-y: auto; flex: 1;
+  }
+  .panel-body::-webkit-scrollbar { width: 4px; }
+  .panel-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .concept-item { margin-bottom: 14px; }
+  .concept-item h4 {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.08em; margin-bottom: 5px;
+  }
+  .concept-item p { font-size: 12px; color: var(--text-dim); line-height: 1.55; }
+  .concept-item .formula {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    background: var(--surface2); border-left: 2px solid var(--amber);
+    padding: 5px 8px; border-radius: 0 4px 4px 0; margin-top: 5px; color: var(--amber);
+  }
+  .concept-item .implication {
+    margin-top: 5px; font-size: 11px; color: var(--green);
+    font-style: italic;
+  }
+
+  .tabs { display: flex; gap: 2px; margin-bottom: 12px; }
+  .tab-btn {
+    flex: 1; padding: 6px 4px; font-size: 10px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text-dim); cursor: pointer; border-radius: 4px;
+    transition: all 0.15s;
+  }
+  .tab-btn.active {
+    background: var(--amber); color: var(--bg); border-color: var(--amber);
+  }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+
+  /* Badges de zona */
+  .zone-badge {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 20px; margin-bottom: 6px;
+  }
+  .zone-1 { background: rgba(62,207,142,0.15); color: var(--green); border: 1px solid var(--green-dim); }
+  .zone-2 { background: rgba(91,155,213,0.15); color: var(--blue); border: 1px solid #2D5A8A; }
+  .zone-3 { background: rgba(224,82,82,0.15);  color: var(--red);  border: 1px solid var(--red-dim);  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🐔</div>
+    <div class="logo-text">
+      <h1>Simulador Avícola — Pollos Cobb 500</h1>
+      <p>Modelo Microeconómico de Producción · Velázquez-Villalva &amp; Rebollar-Rebollar, 2025</p>
+    </div>
+  </div>
+  <span class="header-tag">ACTIVIDAD 006</span>
+</header>
+
+<div class="app">
+
+  <!-- ═══ SIDEBAR ═══ -->
+  <aside class="sidebar">
+
+    <!-- Modelo q = aL² + bL + c -->
+    <div>
+      <div class="section-label">Parámetros del modelo q = aL³ + bL² + cL</div>
+      <div class="param-grid">
+        <div class="param-item">
+          <label>a (cúbico)</label>
+          <input type="number" id="pa" value="-0.025" step="0.001">
+        </div>
+        <div class="param-item">
+          <label>b (cuadrático)</label>
+          <input type="number" id="pb" value="0.35" step="0.01">
+        </div>
+        <div class="param-item">
+          <label>c (lineal)</label>
+          <input type="number" id="pc" value="0.5" step="0.05">
+        </div>
+        <div class="param-item">
+          <label>L máx (kg alimento)</label>
+          <input type="number" id="lmax" value="13" step="0.5" min="6" max="20">
+        </div>
+      </div>
+      <button id="btnUpdate" style="margin-top:10px;width:100%;padding:8px;background:var(--amber);border:none;border-radius:6px;color:var(--bg);font-weight:700;font-size:13px;cursor:pointer;">
+        ↻ Actualizar modelo
+      </button>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Precios -->
+    <div>
+      <div class="section-label">Precios de mercado</div>
+      <div class="control-group">
+        <div class="control-row">
+          <span class="control-label">Precio alimento Pₐ ($/kg)</span>
+          <span class="control-value" id="valPa">6.75</span>
+        </div>
+        <input type="range" id="slPa" min="1" max="20" step="0.25" value="6.75">
+      </div>
+      <div class="control-group" style="margin-top:12px">
+        <div class="control-row">
+          <span class="control-label">Precio pollo Pₚ ($/kg)</span>
+          <span class="control-value" id="valPp">45.00</span>
+        </div>
+        <input type="range" id="slPp" min="10" max="120" step="0.5" value="45">
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Resultados clave -->
+    <div>
+      <div class="section-label">Resultados clave</div>
+      <div class="results-card">
+        <div class="result-row">
+          <span class="result-key">NOT — Óptimo Técnico (L)</span>
+          <span class="result-val val-green" id="r-not">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">NOT — PMe máx (kg/kg)</span>
+          <span class="result-val val-green" id="r-not-pme">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">MT — Máximo Técnico (L)</span>
+          <span class="result-val val-blue" id="r-mt">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">MT — PT máx (kg)</span>
+          <span class="result-val val-blue" id="r-mt-pt">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">Pₐ/Pₚ (relación precios)</span>
+          <span class="result-val val-amber" id="r-ratio">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">NOE — Óptimo Económico (L)</span>
+          <span class="result-val val-purple" id="r-noe">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">NOE — PT en NOE (kg)</span>
+          <span class="result-val val-purple" id="r-noe-pt">—</span>
+        </div>
+        <div class="result-row">
+          <span class="result-key">Ganancia en NOE ($)</span>
+          <span class="result-val val-purple" id="r-noe-gan">—</span>
+        </div>
+      </div>
+      <div class="recomendacion" id="recomendacion"></div>
+    </div>
+
+  </aside>
+
+  <!-- ═══ CHARTS AREA ═══ -->
+  <main class="charts-area">
+
+    <!-- Gráfica 1: PT + Etapas -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Producto Total (PT) — Etapas de Producción</span>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--pt-color)"></div> PT (kg peso vivo)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> NOT</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--blue)"></div> MT</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> NOE</div>
+        </div>
+      </div>
+      <canvas id="chartPT" height="260"></canvas>
+    </div>
+
+    <!-- Gráfica 2: PMe y PMg -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <span class="chart-title">Producto Medio (PMe) y Producto Marginal (PMg)</span>
+        <div class="chart-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--pme-color)"></div> PMe (kg/kg)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--pmg-color)"></div> PMg (kg/kg)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:var(--purple)"></div> Pₐ/Pₚ</div>
+        </div>
+      </div>
+      <canvas id="chartPMePMg" height="260"></canvas>
+    </div>
+
+    <!-- Tabla de datos -->
+    <div class="table-card">
+      <div class="table-header">
+        <span class="chart-title">Tabla de Producción</span>
+        <span style="font-size:11px;color:var(--text-muted);margin-left:10px;">🟢 NOT · 🔵 MT · 🟣 NOE</span>
+      </div>
+      <div class="table-scroll">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>L (kg alim.)</th>
+              <th>PT (kg)</th>
+              <th>PMe (kg/kg)</th>
+              <th>PMg (kg/kg)</th>
+              <th>Ingreso ($)</th>
+              <th>Costo ($)</th>
+              <th>Ganancia ($)</th>
+              <th>Etapa</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+</div><!-- /app -->
+
+
+<!-- ═══ PANEL DE CONCEPTOS (arrastrable) ═══ -->
+<div class="concept-panel" id="conceptPanel">
+  <div class="panel-handle" id="panelHandle">
+    <span class="panel-handle-title">📚 Conceptos Clave &amp; Decisiones</span>
+    <button class="panel-toggle" id="panelToggle">▾</button>
+  </div>
+  <div class="panel-body" id="panelBody">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="conceptos">Conceptos</button>
+      <button class="tab-btn" data-tab="etapas">Etapas</button>
+      <button class="tab-btn" data-tab="decisiones">Decisiones</button>
+    </div>
+
+    <!-- Tab: Conceptos -->
+    <div class="tab-content active" id="tab-conceptos">
+      <div class="concept-item">
+        <h4 style="color:var(--pt-color)">Producto Total (PT)</h4>
+        <p>Cantidad total de peso vivo (kg) obtenido con una cantidad dada de alimento (L).</p>
+        <div class="formula">PT = aL³ + bL² + cL</div>
+        <p class="implication">→ Mide la productividad absoluta del sistema.</p>
+      </div>
+      <div class="concept-item">
+        <h4 style="color:var(--pme-color)">Producto Medio (PMe)</h4>
+        <p>Peso vivo obtenido por kg de alimento consumido. Indica la eficiencia promedio del insumo.</p>
+        <div class="formula">PMe = PT / L</div>
+        <p class="implication">→ Su máximo define el Nivel Óptimo Técnico (NOT).</p>
+      </div>
+      <div class="concept-item">
+        <h4 style="color:var(--pmg-color)">Producto Marginal (PMg)</h4>
+        <p>Cambio en PT al agregar 1 kg adicional de alimento. Clave para la decisión económica.</p>
+        <div class="formula">PMg = dPT/dL = 3aL² + 2bL + c</div>
+        <p class="implication">→ Decrece conforme aumenta L (ley de rendimientos decrecientes).</p>
+      </div>
+      <hr class="divider">
+      <div class="concept-item">
+        <h4 style="color:var(--green)">NOT — Óptimo Técnico</h4>
+        <p>Punto donde PMe es máximo. Máxima eficiencia física del alimento.</p>
+        <div class="formula">Condición: PMg = PMe</div>
+        <p class="implication">→ No es necesariamente el punto de mayor ganancia.</p>
+      </div>
+      <div class="concept-item">
+        <h4 style="color:var(--blue)">MT — Máximo Técnico</h4>
+        <p>Punto donde PT es máximo. Agregar más alimento reduciría la producción total.</p>
+        <div class="formula">Condición: PMg = 0</div>
+        <p class="implication">→ Límite biológico. Nunca conviene sobrepasarlo.</p>
+      </div>
+      <div class="concept-item">
+        <h4 style="color:var(--purple)">NOE — Óptimo Económico</h4>
+        <p>Nivel donde la ganancia es máxima. El ingreso marginal del kg de pollo iguala el costo marginal del alimento.</p>
+        <div class="formula">Condición: PMg = Pₐ / Pₚ</div>
+        <p class="implication">→ Punto racional de decisión empresarial.</p>
+      </div>
+    </div>
+
+    <!-- Tab: Etapas -->
+    <div class="tab-content" id="tab-etapas">
+      <div class="concept-item">
+        <span class="zone-badge zone-1">Etapa I</span>
+        <h4 style="color:var(--green)">Rendimientos Marginales Crecientes</h4>
+        <p>Desde L=0 hasta el NOT. PMg &gt; PMe. Cada kg de alimento añade más que el promedio.</p>
+        <p class="implication">→ Decisión: aumentar el uso del insumo (zona sub-óptima, no eficiente).</p>
+      </div>
+      <hr class="divider">
+      <div class="concept-item">
+        <span class="zone-badge zone-2">Etapa II</span>
+        <h4 style="color:var(--blue)">Rendimientos Decrecientes Positivos</h4>
+        <p>Desde NOT hasta MT. PMe &gt; PMg &gt; 0. La producción total sigue creciendo, pero cada kg adicional aporta menos.</p>
+        <p class="implication">→ Zona racional de producción. El NOE siempre cae aquí.</p>
+      </div>
+      <hr class="divider">
+      <div class="concept-item">
+        <span class="zone-badge zone-3">Etapa III</span>
+        <h4 style="color:var(--red)">Rendimientos Negativos</h4>
+        <p>Más allá del MT. PMg &lt; 0. Agregar alimento reduce el PT total. Sobrealimentación perjudicial.</p>
+        <p class="implication">→ Decisión: nunca operar aquí. Es ineficiente y perjudicial.</p>
+      </div>
+    </div>
+
+    <!-- Tab: Decisiones -->
+    <div class="tab-content" id="tab-decisiones">
+      <div class="concept-item">
+        <h4 style="color:var(--amber)">¿Cómo afectan los precios al NOE?</h4>
+        <p>Si el precio del alimento (Pₐ) <strong>sube</strong>, la relación Pₐ/Pₚ aumenta → el NOE se desplaza a la <strong>izquierda</strong> (menos alimento óptimo).</p>
+        <p style="margin-top:6px">Si el precio del pollo (Pₚ) <strong>sube</strong>, la relación Pₐ/Pₚ baja → el NOE se desplaza a la <strong>derecha</strong> (más alimento óptimo).</p>
+        <p class="implication">→ El avicultor debe ajustar el suministro de alimento ante cambios de precios.</p>
+      </div>
+      <hr class="divider">
+      <div class="concept-item">
+        <h4 style="color:var(--amber)">Conclusión del Estudio</h4>
+        <p style="font-size:12px;color:var(--text-dim);line-height:1.6;">
+          "El peso máximo del pollo no significa el máximo valor monetario. El avicultor debería vender las aves al peso del nivel óptimo económico." — Velázquez-Villalva &amp; Rebollar-Rebollar, 2025.
+        </p>
+        <p class="implication">→ La decisión óptima se basa en ganancia máxima, no en producción máxima.</p>
+      </div>
+      <hr class="divider">
+      <div class="concept-item">
+        <h4 style="color:var(--amber)">Regla de Oro de la Producción</h4>
+        <div class="formula">Añadir insumo mientras: PMg × Pₚ ≥ Pₐ</div>
+        <p style="margin-top:6px;font-size:12px;color:var(--text-dim)">Es decir, mientras el valor del kg adicional de pollo supere el costo del kg adicional de alimento.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ═══════════════════════════════════════
+//  MODELO Y CÁLCULOS
+// ═══════════════════════════════════════
+
+let a, b, c, Lmax, Pa, Pp;
+
+function readParams() {
+  a    = parseFloat(document.getElementById('pa').value)    || -0.025;
+  b    = parseFloat(document.getElementById('pb').value)    || 0.35;
+  c    = parseFloat(document.getElementById('pc').value)    || 0.5;
+  Lmax = parseFloat(document.getElementById('lmax').value)  || 13;
+  Pa   = parseFloat(document.getElementById('slPa').value)  || 6.75;
+  Pp   = parseFloat(document.getElementById('slPp').value)  || 45;
+}
+
+function PT(L)  { return a*L**3 + b*L**2 + c*L; }
+function PMg(L) { return 3*a*L**2 + 2*b*L + c; }
+function PMe(L) { return L > 0 ? PT(L)/L : 0; }
+
+// Encontrar L donde PMg == target, mediante búsqueda
+function findL(target, lo, hi, tol=0.001) {
+  for(let i=0;i<200;i++) {
+    const mid = (lo+hi)/2;
+    const v = PMg(mid);
+    if(Math.abs(v-target) < tol) return mid;
+    if(v > target) lo = mid; else hi = mid;
+  }
+  return (lo+hi)/2;
+}
+
+// NOT: máximo PMe ↔ PMg = PMe → aL² + bL + c = (aL³+bL²+cL)/L → aL² + bL + c = aL² + bL + c ✓ always
+// Derivada de PMe = 0: d/dL[(aL²+bL+c)] = 2aL + b = 0 → L = -b/(2a)
+function calcNOT() {
+  const L = -b / (2*a);
+  return (L > 0 && L < Lmax) ? L : null;
+}
+
+// MT: PMg = 0 → 3aL² + 2bL + c = 0
+function calcMT() {
+  const disc = (2*b)**2 - 4*3*a*c;
+  if(disc < 0) return null;
+  const L1 = (-2*b + Math.sqrt(disc)) / (2*3*a);
+  const L2 = (-2*b - Math.sqrt(disc)) / (2*3*a);
+  const valid = [L1, L2].filter(l => l > 0 && l < Lmax);
+  return valid.length ? Math.max(...valid) : null;
+}
+
+// NOE: PMg = Pa/Pp → 3aL² + 2bL + (c - Pa/Pp) = 0
+function calcNOE() {
+  const ratio = Pa/Pp;
+  const cc = c - ratio;
+  const disc = (2*b)**2 - 4*3*a*cc;
+  if(disc < 0) return null;
+  const L1 = (-2*b + Math.sqrt(disc)) / (6*a);
+  const L2 = (-2*b - Math.sqrt(disc)) / (6*a);
+  const valid = [L1, L2].filter(l => l > 0 && l < Lmax);
+  return valid.length ? Math.max(...valid) : null;
+}
+
+function generateData(steps=130) {
+  const points = [];
+  for(let i=0;i<=steps;i++) {
+    const L = (i/steps)*Lmax;
+    points.push({ L, pt: PT(L), pme: PMe(L), pmg: PMg(L) });
+  }
+  return points;
+}
+
+// ═══════════════════════════════════════
+//  GRÁFICAS
+// ═══════════════════════════════════════
+
+const COLORS = {
+  pt:    '#5B9BD5',
+  pme:   '#3ECF8E',
+  pmg:   '#F5A623',
+  noe:   '#A78BFA',
+  mt:    '#5B9BD5',
+  not:   '#3ECF8E',
+  ratio: '#A78BFA',
+  grid:  'rgba(30,48,72,0.7)',
+  zone1: 'rgba(62,207,142,0.08)',
+  zone2: 'rgba(91,155,213,0.06)',
+  zone3: 'rgba(224,82,82,0.08)',
+};
+
+let chartPT, chartPMePMg;
+
+function initCharts(data, notL, mtL, noeL) {
+  const labels  = data.map(d => d.L.toFixed(2));
+  const ptVals  = data.map(d => Math.max(0, d.pt));
+  const pmeVals = data.map(d => d.pme);
+  const pmgVals = data.map(d => d.pmg);
+  const ratio   = Pa/Pp;
+
+  const ptCtx  = document.getElementById('chartPT').getContext('2d');
+  const mp2Ctx = document.getElementById('chartPMePMg').getContext('2d');
+
+  if(chartPT) chartPT.destroy();
+  if(chartPMePMg) chartPMePMg.destroy();
+
+  // Zone background plugin
+  const zonePlugin = (not_, mt_) => ({
+    id: 'zones',
+    beforeDraw(chart) {
+      const {ctx, chartArea:{left,right,top,bottom}, scales:{x}} = chart;
+      const toX = l => x.getPixelForValue(parseFloat(l));
+      const notX = not_ ? toX(not_.toFixed(2)) : null;
+      const mtX  = mt_  ? toX(mt_.toFixed(2))  : null;
+
+      ctx.save();
+      if(notX) {
+        ctx.fillStyle = COLORS.zone1;
+        ctx.fillRect(left, top, notX-left, bottom-top);
+      }
+      if(notX && mtX) {
+        ctx.fillStyle = COLORS.zone2;
+        ctx.fillRect(notX, top, mtX-notX, bottom-top);
+      }
+      if(mtX) {
+        ctx.fillStyle = COLORS.zone3;
+        ctx.fillRect(mtX, top, right-mtX, bottom-top);
+      }
+      ctx.restore();
+    }
+  });
+
+  const vertLinePlugin = (points) => ({
+    id: 'vertLines',
+    afterDraw(chart) {
+      const {ctx, chartArea:{top,bottom}, scales:{x}} = chart;
+      points.forEach(({l, color, label}) => {
+        if(l === null) return;
+        const xp = x.getPixelForValue(l.toFixed(2));
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5,4]);
+        ctx.beginPath(); ctx.moveTo(xp,top); ctx.lineTo(xp,bottom); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = color;
+        ctx.font = 'bold 10px Inter, sans-serif';
+        ctx.fillText(label, xp+4, top+14);
+        ctx.restore();
+      });
+    }
+  });
+
+  // ─ Chart PT ─
+  const notPt = notL ? PT(notL) : null;
+  const mtPt  = mtL  ? PT(mtL)  : null;
+  const noePt = noeL ? PT(noeL) : null;
+
+  const ptDatasets = [
+    {
+      label: 'PT (kg)', data: ptVals,
+      borderColor: COLORS.pt, borderWidth: 2.5,
+      fill: false, tension: 0.4, pointRadius: 0,
+    }
+  ];
+
+  chartPT = new Chart(ptCtx, {
+    type: 'line',
+    data: { labels, datasets: ptDatasets },
+    options: {
+      animation: { duration: 600 },
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index', intersect: false,
+          backgroundColor: '#111E2E', borderColor: '#1E3048', borderWidth: 1,
+          titleColor: '#7A90A8', bodyColor: '#E8EDF4',
+          callbacks: {
+            label(ctx) { return `  PT: ${ctx.parsed.y.toFixed(3)} kg`; }
+          }
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color:'#3D5268', maxTicksLimit:14, font:{size:10,family:'JetBrains Mono'} },
+          grid: { color: COLORS.grid },
+          title: { display:true, text:'Alimento consumido L (kg)', color:'#7A90A8', font:{size:11} }
+        },
+        y: {
+          ticks: { color:'#3D5268', font:{size:10,family:'JetBrains Mono'} },
+          grid: { color: COLORS.grid },
+          title: { display:true, text:'Peso vivo PT (kg)', color:'#7A90A8', font:{size:11} }
+        }
+      }
+    },
+    plugins: [
+      zonePlugin(notL, mtL),
+      vertLinePlugin([
+        { l: notL, color: COLORS.not, label: 'NOT' },
+        { l: mtL,  color: COLORS.mt,  label: 'MT'  },
+        { l: noeL, color: COLORS.noe, label: 'NOE' },
+      ]),
+      {
+        id: 'ptPoints',
+        afterDraw(chart) {
+          const {ctx, scales:{x,y}} = chart;
+          const pts = [
+            {l:notL, pt:notPt, color:COLORS.not, label:`NOT (${notL?.toFixed(2)}, ${notPt?.toFixed(3)})`},
+            {l:mtL,  pt:mtPt,  color:COLORS.mt,  label:`MT  (${mtL?.toFixed(2)}, ${mtPt?.toFixed(3)})`},
+            {l:noeL, pt:noePt, color:COLORS.noe, label:`NOE (${noeL?.toFixed(2)}, ${noePt?.toFixed(3)})`},
+          ];
+          pts.forEach(({l,pt,color,label}) => {
+            if(!l) return;
+            const xp = x.getPixelForValue(l.toFixed(2));
+            const yp = y.getPixelForValue(pt);
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(xp, yp, 5, 0, Math.PI*2); ctx.fill();
+            ctx.strokeStyle = '#0B1520'; ctx.lineWidth=2;
+            ctx.stroke();
+            ctx.restore();
+          });
+        }
+      }
+    ]
+  });
+
+  // ─ Chart PMe & PMg ─
+  const ratioData = data.map(() => ratio);
+
+  chartPMePMg = new Chart(mp2Ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'PMe (kg/kg)', data: pmeVals,
+          borderColor: COLORS.pme, borderWidth: 2.5,
+          fill: false, tension: 0.4, pointRadius: 0,
+        },
+        {
+          label: 'PMg (kg/kg)', data: pmgVals,
+          borderColor: COLORS.pmg, borderWidth: 2, borderDash: [6,3],
+          fill: false, tension: 0.4, pointRadius: 0,
+        },
+        {
+          label: 'Pₐ/Pₚ', data: ratioData,
+          borderColor: COLORS.ratio, borderWidth: 1.5, borderDash: [2,4],
+          fill: false, tension: 0, pointRadius: 0,
+        },
+      ]
+    },
+    options: {
+      animation: { duration: 600 },
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          mode: 'index', intersect: false,
+          backgroundColor: '#111E2E', borderColor: '#1E3048', borderWidth: 1,
+          titleColor: '#7A90A8', bodyColor: '#E8EDF4',
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color:'#3D5268', maxTicksLimit:14, font:{size:10,family:'JetBrains Mono'} },
+          grid: { color: COLORS.grid },
+          title: { display:true, text:'Alimento consumido L (kg)', color:'#7A90A8', font:{size:11} }
+        },
+        y: {
+          ticks: { color:'#3D5268', font:{size:10,family:'JetBrains Mono'} },
+          grid: { color: COLORS.grid },
+          title: { display:true, text:'PMe / PMg (kg/kg)', color:'#7A90A8', font:{size:11} }
+        }
+      }
+    },
+    plugins: [
+      zonePlugin(notL, mtL),
+      vertLinePlugin([
+        { l: notL, color: COLORS.not, label: 'NOT' },
+        { l: mtL,  color: COLORS.mt,  label: 'MT'  },
+        { l: noeL, color: COLORS.noe, label: 'NOE' },
+      ]),
+      {
+        id: 'mpPoints',
+        afterDraw(chart) {
+          const {ctx, scales:{x,y}} = chart;
+          const pts = [
+            {l:notL, v:notL?PMe(notL):null, color:COLORS.not},
+            {l:noeL, v:noeL?PMg(noeL):null, color:COLORS.noe},
+          ];
+          pts.forEach(({l,v,color}) => {
+            if(!l||v===null) return;
+            const xp = x.getPixelForValue(l.toFixed(2));
+            const yp = y.getPixelForValue(v);
+            ctx.save();
+            ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(xp,yp,5,0,Math.PI*2); ctx.fill();
+            ctx.strokeStyle='#0B1520'; ctx.lineWidth=2; ctx.stroke();
+            ctx.restore();
+          });
+        }
+      }
+    ]
+  });
+}
+
+// ═══════════════════════════════════════
+//  TABLA
+// ═══════════════════════════════════════
+
+function buildTable(notL, mtL, noeL) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  const step = Lmax / 26;
+  for(let i=0;i<=26;i++) {
+    const L   = i*step;
+    const pt  = PT(L);
+    const pme = PMe(L);
+    const pmg = PMg(L);
+    const ing = pt * Pp;
+    const cos = L  * Pa;
+    const gan = ing - cos;
+
+    const isNOT = notL && Math.abs(L - notL) < step*0.55;
+    const isMT  = mtL  && Math.abs(L - mtL)  < step*0.55;
+    const isNOE = noeL && Math.abs(L - noeL)  < step*0.55;
+
+    let etapa = '—';
+    if(notL && mtL) {
+      if(L <= notL) etapa = 'I';
+      else if(L <= mtL) etapa = 'II';
+      else etapa = 'III';
+    }
+
+    const tr = document.createElement('tr');
+    if(isNOT) tr.className='highlight-not';
+    else if(isMT) tr.className='highlight-mt';
+    else if(isNOE) tr.className='highlight-noe';
+
+    const badge = isNOT ? ' 🟢' : isMT ? ' 🔵' : isNOE ? ' 🟣' : '';
+    tr.innerHTML = `
+      <td>${L.toFixed(2)}${badge}</td>
+      <td>${pt.toFixed(3)}</td>
+      <td>${pme.toFixed(3)}</td>
+      <td>${pmg.toFixed(3)}</td>
+      <td>$${ing.toFixed(2)}</td>
+      <td>$${cos.toFixed(2)}</td>
+      <td style="color:${gan>=0?'#3ECF8E':'#E05252'}">${gan>=0?'+':''}$${gan.toFixed(2)}</td>
+      <td style="color:${etapa==='I'?'#3ECF8E':etapa==='II'?'#5B9BD5':etapa==='III'?'#E05252':'#7A90A8'}">${etapa}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+}
+
+// ═══════════════════════════════════════
+//  RESULTADOS SIDEBAR
+// ═══════════════════════════════════════
+
+function updateResults(notL, mtL, noeL) {
+  const fmt = (v, d=3) => v !== null ? v.toFixed(d) : 'N/A';
+
+  document.getElementById('r-not').textContent     = notL !== null ? `${fmt(notL,2)} kg` : 'N/A';
+  document.getElementById('r-not-pme').textContent = notL !== null ? `${fmt(PMe(notL))} kg/kg` : 'N/A';
+  document.getElementById('r-mt').textContent      = mtL  !== null ? `${fmt(mtL, 2)} kg` : 'N/A';
+  document.getElementById('r-mt-pt').textContent   = mtL  !== null ? `${fmt(PT(mtL))} kg` : 'N/A';
+
+  const ratio = Pa/Pp;
+  document.getElementById('r-ratio').textContent   = ratio.toFixed(4);
+  document.getElementById('r-noe').textContent     = noeL !== null ? `${fmt(noeL,2)} kg` : 'N/A';
+  document.getElementById('r-noe-pt').textContent  = noeL !== null ? `${fmt(PT(noeL))} kg` : 'N/A';
+
+  const noePt = noeL ? PT(noeL) : null;
+  const gan   = noeL ? (noePt*Pp - noeL*Pa) : null;
+  document.getElementById('r-noe-gan').textContent = gan !== null ? `$${gan.toFixed(2)}` : 'N/A';
+
+  // Recomendación
+  const rec = document.getElementById('recomendacion');
+  if(noeL !== null && mtL !== null) {
+    if(noeL < mtL) {
+      rec.className = 'recomendacion rec-sell';
+      rec.innerHTML = `✅ <strong>VENDER en NOE:</strong> Con Pₐ=$${Pa} y Pₚ=$${Pp}, el punto óptimo es L=${fmt(noeL,2)} kg de alimento → ganancia máxima de $${fmt(gan,2)}.`;
+    } else {
+      rec.className = 'recomendacion rec-wait';
+      rec.innerHTML = `⚠️ <strong>NOE ≈ MT:</strong> Los precios actuales hacen óptimo producir cerca del máximo técnico. Revise costos.`;
+    }
+  } else if(noeL === null) {
+    rec.className = 'recomendacion rec-avoid';
+    rec.innerHTML = `🚫 El ratio Pₐ/Pₚ = ${ratio.toFixed(4)} está fuera del rango de PMg. Ajuste precios o parámetros.`;
+  } else {
+    rec.className = 'recomendacion rec-avoid';
+    rec.innerHTML = `⚠️ No se encontró un punto MT con los parámetros actuales.`;
+  }
+}
+
+// ═══════════════════════════════════════
+//  MAIN UPDATE
+// ═══════════════════════════════════════
+
+function update() {
+  readParams();
+
+  const data = generateData(130);
+  const notL = calcNOT();
+  const mtL  = calcMT();
+  const noeL = calcNOE();
+
+  initCharts(data, notL, mtL, noeL);
+  buildTable(notL, mtL, noeL);
+  updateResults(notL, mtL, noeL);
+}
+
+// ═══════════════════════════════════════
+//  EVENT LISTENERS
+// ═══════════════════════════════════════
+
+document.getElementById('slPa').addEventListener('input', e => {
+  document.getElementById('valPa').textContent = parseFloat(e.target.value).toFixed(2);
+  update();
+});
+document.getElementById('slPp').addEventListener('input', e => {
+  document.getElementById('valPp').textContent = parseFloat(e.target.value).toFixed(2);
+  update();
+});
+document.getElementById('btnUpdate').addEventListener('click', update);
+
+// ─ Tabs ─
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+  });
+});
+
+// ─ Panel draggable ─
+(function() {
+  const panel  = document.getElementById('conceptPanel');
+  const handle = document.getElementById('panelHandle');
+  const toggle = document.getElementById('panelToggle');
+  const body   = document.getElementById('panelBody');
+  let dragging = false, ox, oy;
+
+  handle.addEventListener('mousedown', e => {
+    dragging = true;
+    ox = e.clientX - panel.offsetLeft;
+    oy = e.clientY - panel.offsetTop;
+    panel.style.transition = 'none';
+  });
+  document.addEventListener('mousemove', e => {
+    if(!dragging) return;
+    panel.style.left   = (e.clientX - ox) + 'px';
+    panel.style.top    = (e.clientY - oy) + 'px';
+    panel.style.bottom = 'auto';
+    panel.style.right  = 'auto';
+  });
+  document.addEventListener('mouseup', () => dragging = false);
+
+  let collapsed = false;
+  toggle.addEventListener('click', () => {
+    collapsed = !collapsed;
+    body.style.display = collapsed ? 'none' : '';
+    toggle.textContent = collapsed ? '▸' : '▾';
+  });
+})();
+
+// ─ Init ─
+update();
+</script>
+</body>
+</html>
