@@ -1,0 +1,261 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.av{font-family:var(--font-sans);background:#0f1117;border-radius:16px;padding:0;overflow:hidden;color:#fff}
+.av-layout{display:grid;grid-template-columns:220px 1fr;min-height:600px}
+.av-sidebar{background:#1a1d27;padding:1.5rem 1rem;border-right:1px solid #2a2d3a}
+.av-title{color:#f5c518;font-size:22px;font-weight:700;text-align:center;margin-bottom:1.5rem;line-height:1.2}
+.av-field{margin-bottom:1rem}
+.av-field label{font-size:12px;color:#9ca3af;display:block;margin-bottom:4px}
+.av-field input[type=number]{width:100%;background:#0f1117;border:1px solid #2a2d3a;border-radius:8px;padding:6px 10px;color:#fff;font-size:14px;outline:none}
+.av-field input[type=range]{width:100%;accent-color:#22c55e}
+.av-val{font-size:13px;color:#22c55e;margin-top:2px}
+.av-btn{width:100%;padding:10px;background:#22c55e;border:none;border-radius:10px;color:#0f1117;font-weight:700;font-size:14px;cursor:pointer;margin-top:0.5rem}
+.av-main{padding:1.2rem}
+.av-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.2rem}
+.av-card{border-radius:14px;padding:1rem;display:flex;flex-direction:column;justify-content:space-between;min-height:90px}
+.av-card .c-label{font-size:12px;font-weight:600;opacity:0.9}
+.av-card .c-val{font-size:22px;font-weight:700;margin-top:6px;line-height:1.1}
+.c-yellow{background:#f59e0b}
+.c-green{background:#16a34a}
+.c-blue{background:#2563eb}
+.c-orange{background:#ea580c}
+.av-charts{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
+.chart-box{background:#1a1d27;border-radius:12px;padding:0.8rem}
+.chart-box h4{font-size:13px;color:#d1d5db;margin-bottom:8px;font-weight:500}
+.chart-canvas-wrap{position:relative;height:180px}
+.av-info{background:#1a1d27;border-radius:12px;padding:1rem;font-size:12px;color:#9ca3af;line-height:1.8}
+.av-info strong{color:#f5c518}
+.av-decision{border-radius:10px;padding:0.7rem 1rem;font-size:13px;font-weight:500;margin-bottom:0.8rem}
+.av-decision.good{background:#14532d;color:#86efac;border:1px solid #16a34a}
+.av-decision.warn{background:#78350f;color:#fde68a;border:1px solid #f59e0b}
+.av-decision.bad{background:#7f1d1d;color:#fca5a5;border:1px solid #dc2626}
+.leg{display:flex;gap:12px;font-size:11px;color:#9ca3af;margin-bottom:6px;flex-wrap:wrap}
+.leg span{display:flex;align-items:center;gap:4px}
+.leg-sq{width:10px;height:3px;border-radius:2px}
+</style>
+
+<div class="av">
+  <div class="av-layout">
+    <div class="av-sidebar">
+      <div class="av-title">SIMULADOR<br>AVÍCOLA</div>
+      <div class="av-field">
+        <label>Precio del pollo ($)</label>
+        <input type="number" id="s-pv" value="45" min="10" max="200" step="1">
+      </div>
+      <div class="av-field">
+        <label>Precio alimento ($/kg)</label>
+        <input type="number" id="s-pa" value="10" min="1" max="40" step="0.5">
+      </div>
+      <div class="av-field">
+        <label>Conversión alim. (kg/pollo)</label>
+        <input type="number" id="s-conv" value="2.2" min="1" max="4" step="0.1">
+      </div>
+      <div class="av-field">
+        <label>Otros CV ($/pollo)</label>
+        <input type="number" id="s-ocv" value="5" min="0" max="50" step="1">
+      </div>
+      <div class="av-field">
+        <label>Costos fijos (CF)</label>
+        <input type="number" id="s-cf" value="5000" min="1000" max="80000" step="500">
+      </div>
+      <div class="av-field">
+        <label>Capacidad máxima (pollos)</label>
+        <input type="number" id="s-qmax" value="1000" min="200" max="20000" step="100">
+      </div>
+      <div class="av-field">
+        <label>Alimento utilizado (kg)</label>
+        <input type="range" id="s-alim" min="0" max="100" value="30">
+        <div class="av-val" id="alim-out">30%</div>
+      </div>
+      <button class="av-btn" onclick="render()">▶ Calcular</button>
+    </div>
+
+    <div class="av-main">
+      <div class="av-cards">
+        <div class="av-card c-yellow"><div class="c-label">Fundamentos</div><div class="c-val" id="c-q">—</div></div>
+        <div class="av-card c-green"><div class="c-label">Beneficio</div><div class="c-val" id="c-util">—</div></div>
+        <div class="av-card c-blue"><div class="c-label">Método</div><div class="c-val" id="c-met" style="font-size:15px">—</div></div>
+        <div class="av-card c-orange"><div class="c-label">Eficiencia</div><div class="c-val" id="c-ef">—</div></div>
+      </div>
+
+      <div id="av-decision" class="av-decision good"></div>
+
+      <div class="av-charts">
+        <div class="chart-box">
+          <h4>Curvas Microeconómicas</h4>
+          <div class="leg">
+            <span><span class="leg-sq" style="background:#ef4444"></span>CTMe</span>
+            <span><span class="leg-sq" style="background:#3b82f6"></span>CVMe</span>
+            <span><span class="leg-sq" style="background:#22c55e"></span>CMg</span>
+            <span><span class="leg-sq" style="background:#f5c518"></span>Precio</span>
+          </div>
+          <div class="chart-canvas-wrap"><canvas id="ch1" role="img" aria-label="Curvas de costos medios y marginal"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <h4>Beneficio Económico</h4>
+          <div class="leg"><span><span class="leg-sq" style="background:#f59e0b"></span>Beneficio ($)</span></div>
+          <div class="chart-canvas-wrap"><canvas id="ch2" role="img" aria-label="Beneficio económico por nivel de producción"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <h4>CT, CV y CF</h4>
+          <div class="leg">
+            <span><span class="leg-sq" style="background:#3b82f6"></span>CT</span>
+            <span><span class="leg-sq" style="background:#ef4444"></span>CV</span>
+            <span><span class="leg-sq" style="background:#6b7280"></span>CF</span>
+          </div>
+          <div class="chart-canvas-wrap"><canvas id="ch3" role="img" aria-label="Costos totales variables y fijos"></canvas></div>
+        </div>
+        <div class="chart-box">
+          <h4>Ingreso vs Costo Total</h4>
+          <div class="leg">
+            <span><span class="leg-sq" style="background:#22c55e"></span>Ingreso</span>
+            <span><span class="leg-sq" style="background:#f59e0b"></span>CT</span>
+          </div>
+          <div class="chart-canvas-wrap"><canvas id="ch4" role="img" aria-label="Ingreso total versus costo total"></canvas></div>
+        </div>
+      </div>
+
+      <div class="av-info">
+        <strong>Fundamentos teóricos:</strong> CF (infraestructura fija) · CV (alimento + otros insumos) · CT = CF + CV<br>
+        <strong>Costos medios:</strong> CFMe = CF/Q · CVMe = CV/Q · CTMe = CT/Q<br>
+        <strong>Punto óptimo:</strong> CMg = IMg (precio de venta) &nbsp;|&nbsp; <strong>Punto de cierre:</strong> P &lt; CVMe
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+let charts = {};
+
+function gp() {
+  return {
+    pv: +document.getElementById('s-pv').value,
+    pa: +document.getElementById('s-pa').value,
+    conv: +document.getElementById('s-conv').value,
+    ocv: +document.getElementById('s-ocv').value,
+    CF: +document.getElementById('s-cf').value,
+    qmax: +document.getElementById('s-qmax').value,
+    alimPct: +document.getElementById('s-alim').value,
+  };
+}
+
+function buildRows(p) {
+  const cvu = p.pa * p.conv + p.ocv;
+  const steps = 20;
+  const rows = [];
+  for (let i = 0; i <= steps; i++) {
+    const q = Math.round((p.qmax / steps) * i);
+    const cv = cvu * q;
+    const ct = p.CF + cv;
+    const it = p.pv * q;
+    const util = it - ct;
+    rows.push({
+      q, cv, ct, it, util,
+      cfme: q > 0 ? p.CF / q : null,
+      cvme: q > 0 ? cv / q : null,
+      ctme: q > 0 ? ct / q : null,
+    });
+  }
+  rows.forEach((r, i) => {
+    r.cmg = i === 0 ? null : (r.ct - rows[i-1].ct) / (r.q - rows[i-1].q);
+  });
+  return rows;
+}
+
+function findOpt(rows, pv) {
+  let best = null;
+  rows.forEach(r => {
+    if (r.cmg !== null && (best === null || Math.abs(r.cmg - pv) < Math.abs(best.cmg - pv))) best = r;
+  });
+  return best;
+}
+
+function mkChart(id, type, data, opts) {
+  if (charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), { type, data, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, ...opts } });
+}
+
+const darkTick = { color: '#6b7280', font: { size: 10 } };
+const darkGrid = { color: 'rgba(255,255,255,0.05)' };
+const scaleBase = { ticks: darkTick, grid: darkGrid };
+
+function render() {
+  const p = gp();
+  const rows = buildRows(p);
+  const opt = findOpt(rows, p.pv);
+  const cvu = p.pa * p.conv + p.ocv;
+  const qOpt = opt ? opt.q : 0;
+  const utilOpt = opt ? opt.util : 0;
+  const qAlim = Math.round(p.qmax * p.alimPct / 100);
+  const rowAlim = rows.reduce((b, r) => Math.abs(r.q - qAlim) < Math.abs(b.q - qAlim) ? r : b, rows[0]);
+
+  document.getElementById('c-q').textContent = fmtN(qOpt);
+  document.getElementById('c-util').textContent = fmt(utilOpt);
+  document.getElementById('c-ef').textContent = p.qmax > 0 ? Math.round(qOpt / p.qmax * 100) + '%' : '—';
+
+  const met = p.pv < cvu ? 'Cierre inmediato' : utilOpt < 0 ? 'Pérdida temporal' : 'Producción rentable';
+  document.getElementById('c-met').textContent = met;
+
+  const dec = document.getElementById('av-decision');
+  if (p.pv < cvu) {
+    dec.className = 'av-decision bad';
+    dec.textContent = `⚠ Punto de cierre: precio ($${p.pv}) < CVMe ($${cvu.toFixed(2)}). Cada unidad producida aumenta la pérdida.`;
+  } else if (utilOpt < 0) {
+    dec.className = 'av-decision warn';
+    dec.textContent = `⚡ Pérdida en Q óptimo: ${fmt(utilOpt)}. El precio cubre costos variables pero no los fijos. Continuar en corto plazo.`;
+  } else {
+    dec.className = 'av-decision good';
+    dec.textContent = `✔ Producción rentable. Q óptimo: ${fmtN(qOpt)} pollos. Utilidad máxima: ${fmt(utilOpt)}.`;
+  }
+
+  const labels = rows.map(r => fmtN(r.q));
+  const cap = v => v === null ? null : Math.min(Math.max(v, 0), p.pv * 4);
+
+  mkChart('ch1', 'line', {
+    labels,
+    datasets: [
+      { data: rows.map(r => r.ctme !== null ? +r.ctme.toFixed(2) : null), borderColor: '#ef4444', borderWidth: 2, pointRadius: 0, spanGaps: false },
+      { data: rows.map(r => r.cvme !== null ? +r.cvme.toFixed(2) : null), borderColor: '#3b82f6', borderWidth: 2, pointRadius: 0, spanGaps: false },
+      { data: rows.map(r => r.cmg !== null ? +Math.min(r.cmg, p.pv * 3).toFixed(2) : null), borderColor: '#22c55e', borderWidth: 2, pointRadius: 0, spanGaps: false },
+      { data: rows.map(() => p.pv), borderColor: '#f5c518', borderWidth: 1.5, borderDash: [5,3], pointRadius: 0 },
+    ]
+  }, { scales: { x: { ...scaleBase, ticks: { ...darkTick, maxTicksLimit: 6 } }, y: { ...scaleBase, min: 0 } } });
+
+  mkChart('ch2', 'bar', {
+    labels,
+    datasets: [{ data: rows.map(r => +r.util.toFixed(0)), backgroundColor: rows.map(r => r.util >= 0 ? '#f59e0b' : '#ef4444'), borderRadius: 3 }]
+  }, { scales: { x: { ...scaleBase, ticks: { ...darkTick, maxTicksLimit: 6 } }, y: { ...scaleBase } } });
+
+  mkChart('ch3', 'line', {
+    labels,
+    datasets: [
+      { data: rows.map(r => +r.ct.toFixed(0)), borderColor: '#3b82f6', borderWidth: 2, pointRadius: 0, fill: false },
+      { data: rows.map(r => +r.cv.toFixed(0)), borderColor: '#ef4444', borderWidth: 2, pointRadius: 0, fill: false },
+      { data: rows.map(() => +p.CF.toFixed(0)), borderColor: '#6b7280', borderWidth: 1.5, borderDash: [5,3], pointRadius: 0 },
+    ]
+  }, { scales: { x: { ...scaleBase, ticks: { ...darkTick, maxTicksLimit: 6 } }, y: { ...scaleBase } } });
+
+  mkChart('ch4', 'line', {
+    labels,
+    datasets: [
+      { data: rows.map(r => +r.it.toFixed(0)), borderColor: '#22c55e', borderWidth: 2, pointRadius: 0, fill: false },
+      { data: rows.map(r => +r.ct.toFixed(0)), borderColor: '#f59e0b', borderWidth: 2, pointRadius: 0, fill: false },
+    ]
+  }, { scales: { x: { ...scaleBase, ticks: { ...darkTick, maxTicksLimit: 6 } }, y: { ...scaleBase } } });
+}
+
+function fmt(n) { return '$' + Math.round(n).toLocaleString('es-MX'); }
+function fmtN(n) { return Math.round(n).toLocaleString('es-MX'); }
+
+document.getElementById('s-alim').addEventListener('input', e => {
+  document.getElementById('alim-out').textContent = e.target.value + '%';
+  render();
+});
+['s-pv','s-pa','s-conv','s-ocv','s-cf','s-qmax'].forEach(id => {
+  document.getElementById(id).addEventListener('input', render);
+});
+
+render();
+</script>
